@@ -1,4 +1,5 @@
 import datetime as dt
+import pandas as pd
 import numpy as np
 
 import sqlalchemy
@@ -27,20 +28,40 @@ def welcome():
         f"/api/v1.0/precipitation<br/>"
         f"/api/v1.0/stations<br/>"
         f"/api/v1.0/tobs<br/>"
-        f"/api/v1.0/start<br/>"
-        f"/api/v1.0/start/end<br/>"
+        f"/api/v1.0/temp/start/end"
     )
 
 @app.route("/api/v1.0/precipitation")
 def precipitation():
-    values = session.query(Measurement.date, Measurement.prcp).all()
-    list = []
-    for value in values:
-        dict_values = {"Date": value[0], "Precipitation": value[1]}
-        list.append(dict_values)
-    return jsonify(list)
+    session = Session(engine)
+    cur_year = dt.date(2017, 8, 23)
+    prev_year = cur_year - dt.timedelta(days=365)
+
+    prcp=session.query(Measurement.date, func.sum(Measurement.prcp)).\
+        filter(Measurement.prcp != None).filter(Measurement.date>=prev_year).\
+            group_by(Measurement.date).all()
+    session.close()
+
+    prcp_data = []
+    for d,p in prcp:
+        prcp_dict = {}
+        prcp_dict["date"] = d
+        prcp_dict["prcp"] = p
+        prcp_data.append(prcp_dict)
+    return jsonify(prcp_data)
+
+@app.route("/api/v1.0/stations")
+def stations():
+    session = Session(engine)
+    """Return a list of stations."""
+    results = session.query(Station.station).all()
+
+    stations = list(np.ravel(results))
+    return jsonify(stations)
 
 
+@app.route("/api/v1.0/tobs")
+def tobs():
 
 
 
